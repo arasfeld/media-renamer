@@ -26,7 +26,7 @@
  * ```
  */
 
-import './index.css';
+import '@mantine/core/styles.css';
 import './App';
 
 console.log(
