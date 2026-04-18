@@ -1,7 +1,11 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import * as dotenv from 'dotenv';
 import { registerAllHandlers } from './ipc';
+
+// Load environment variables from .env file
+dotenv.config();
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
