@@ -5,7 +5,7 @@ import { Home } from './pages/Home';
 
 const theme = createTheme({});
 
-const root = createRoot(document.getElementById('root'));
+const root = createRoot(document.getElementById('root')!);
 root.render(
   <MantineProvider theme={theme}>
     <BrowserRouter>

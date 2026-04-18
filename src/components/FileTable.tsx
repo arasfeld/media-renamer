@@ -93,7 +93,7 @@ export function FileTable({ files }: FileTableProps) {
               {displayTitle}
             </Text>
             {match?.episodeTitle && (
-              <Text size="xs" c="dimmed" italic>
+              <Text size="xs" c="dimmed" style={{ fontStyle: 'italic' }}>
                 {match.episodeTitle}
               </Text>
             )}

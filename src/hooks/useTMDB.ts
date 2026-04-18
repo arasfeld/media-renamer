@@ -6,7 +6,10 @@ interface UseTMDBState {
 }
 
 interface UseTMDBActions {
-  matchFiles: (files: ScannedFile[], setFiles: (files: ScannedFile[]) => void) => Promise<void>;
+  matchFiles: (
+    files: ScannedFile[],
+    setFiles: React.Dispatch<React.SetStateAction<ScannedFile[]>>
+  ) => Promise<void>;
   searchManual: (query: string, type: 'tv' | 'movie', year?: number) => Promise<MediaMatch[]>;
 }
 

@@ -4,6 +4,9 @@ import started from 'electron-squirrel-startup';
 import * as dotenv from 'dotenv';
 import { registerAllHandlers } from './ipc';
 
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
+declare const MAIN_WINDOW_VITE_NAME: string;
+
 // Load environment variables from .env file
 dotenv.config();
 
