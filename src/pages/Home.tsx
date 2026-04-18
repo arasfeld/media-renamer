@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  AppShell,
   Button,
   Group,
   Stack,
@@ -14,35 +13,20 @@ import {
   SegmentedControl,
   UnstyledButton,
   Image,
-  ActionIcon,
-  useMantineColorScheme,
-  ColorSwatch,
-  useMantineTheme,
-  Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { Folder, ScanSearch, AlertCircle, Database, Search, CheckCircle2, Sun, Moon } from 'lucide-react';
+import { Folder, ScanSearch, AlertCircle, Database, Search, CheckCircle2 } from 'lucide-react';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useTMDB } from '../hooks/useTMDB';
 import { FileTable } from '../components/FileTable';
 import { generateProposedFilename } from '../lib/parser';
 import type { ScannedFile, MediaMatch } from '../types/media';
 
-interface HomeProps {
-  primaryColor: string;
-  onPrimaryColorChange: (color: string) => void;
-}
-
-const PRIMARY_COLORS = ['blue', 'cyan', 'teal', 'green', 'lime', 'yellow', 'orange', 'red', 'pink', 'grape', 'violet', 'indigo'];
-
-export function Home({ primaryColor, onPrimaryColorChange }: HomeProps) {
+export function Home() {
   const { selectedFolder, files, isLoading, error, selectFolder, scanFolder, setFiles } =
     useFileSystem();
   const { isMatching, matchFiles, searchManual } = useTMDB();
   const [isRenaming, setIsRenaming] = useState(false);
-  
-  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
-  const theme = useMantineTheme();
   
   // Modal state for manual search
   const [opened, { open, close }] = useDisclosure(false);
@@ -110,6 +94,7 @@ export function Home({ primaryColor, onPrimaryColorChange }: HomeProps) {
       .map((f) => {
         const proposed = generateProposedFilename(f);
         if (proposed && f.matchStatus === 'matched') {
+          // Get the directory path from the original file path
           const dir = f.file.path.substring(0, f.file.path.lastIndexOf('/'));
           return {
             from: f.file.path,
@@ -140,103 +125,67 @@ export function Home({ primaryColor, onPrimaryColorChange }: HomeProps) {
   const matchedCount = files.filter(f => f.matchStatus === 'matched').length;
 
   return (
-    <AppShell header={{ height: 60 }} padding="md">
-      <AppShell.Header p="md">
-        <Group justify="space-between" h="100%">
-          <Title order={3}>Media Renamer</Title>
-          <Group gap="lg">
-            <Group gap="xs">
-              {PRIMARY_COLORS.map((color) => (
-                <Tooltip label={color} key={color} openDelay={500}>
-                  <ColorSwatch
-                    component="button"
-                    color={theme.colors[color][6]}
-                    onClick={() => onPrimaryColorChange(color)}
-                    size={18}
-                    style={{ 
-                      cursor: 'pointer',
-                      border: primaryColor === color ? '2px solid white' : 'none',
-                      boxShadow: primaryColor === color ? '0 0 0 1px rgba(0,0,0,0.2)' : 'none'
-                    }}
-                  />
-                </Tooltip>
-              ))}
-            </Group>
-            <ActionIcon
-              variant="default"
-              onClick={() => toggleColorScheme()}
-              size="lg"
-              aria-label="Toggle color scheme"
-            >
-              {colorScheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            </ActionIcon>
-          </Group>
-        </Group>
-      </AppShell.Header>
-
-      <AppShell.Main>
-        <Stack gap="md">
-          <Group justify="space-between">
-            <Group>
-              <Button
-                leftSection={<Folder size={16} />}
-                onClick={selectFolder}
-                variant="default"
-              >
-                Select Folder
-              </Button>
-              <Button
-                leftSection={isLoading ? <Loader size={16} /> : <ScanSearch size={16} />}
-                onClick={scanFolder}
-                disabled={!selectedFolder || isLoading || isMatching || isRenaming}
-              >
-                Scan
-              </Button>
-              {files.length > 0 && (
-                <Button
-                  leftSection={isMatching ? <Loader size={16} /> : <Database size={16} />}
-                  onClick={() => matchFiles(files, setFiles)}
-                  disabled={isLoading || isMatching || isRenaming}
-                  variant="light"
-                  color="blue"
-                >
-                  Match with TMDB
-                </Button>
-              )}
-            </Group>
-            {matchedCount > 0 && (
-              <Button
-                leftSection={isRenaming ? <Loader size={16} /> : <CheckCircle2 size={16} />}
-                onClick={executeRenames}
-                disabled={isLoading || isMatching || isRenaming}
-                color="green"
-              >
-                Rename {matchedCount} File{matchedCount !== 1 ? 's' : ''}
-              </Button>
-            )}
-          </Group>
-
-          {selectedFolder && (
-            <Text size="sm">
-              Selected folder: <Code>{selectedFolder}</Code>
-            </Text>
-          )}
-
-          {error && (
-            <Alert icon={<AlertCircle size={16} />} title="Error" color="red">
-              {error}
-            </Alert>
-          )}
-
+    <Stack gap="md">
+      <Group justify="space-between">
+        <Title order={2}>Renamer</Title>
+        <Group>
+          <Button
+            leftSection={<Folder size={16} />}
+            onClick={selectFolder}
+            variant="default"
+          >
+            Select Folder
+          </Button>
+          <Button
+            leftSection={isLoading ? <Loader size={16} /> : <ScanSearch size={16} />}
+            onClick={scanFolder}
+            disabled={!selectedFolder || isLoading || isMatching || isRenaming}
+          >
+            Scan
+          </Button>
           {files.length > 0 && (
-            <Text size="sm" c="dimmed">
-              Found {files.length} video file{files.length !== 1 ? 's' : ''}
-            </Text>
+            <Button
+              leftSection={isMatching ? <Loader size={16} /> : <Database size={16} />}
+              onClick={() => matchFiles(files, setFiles)}
+              disabled={isLoading || isMatching || isRenaming}
+              variant="light"
+              color="blue"
+            >
+              Match with TMDB
+            </Button>
           )}
+          {matchedCount > 0 && (
+            <Button
+              leftSection={isRenaming ? <Loader size={16} /> : <CheckCircle2 size={16} />}
+              onClick={executeRenames}
+              disabled={isLoading || isMatching || isRenaming}
+              color="green"
+            >
+              Rename {matchedCount} File{matchedCount !== 1 ? 's' : ''}
+            </Button>
+          )}
+        </Group>
+      </Group>
 
-          <FileTable files={files} onManualSearch={handleManualSearchTrigger} />
-        </Stack>
-      </AppShell.Main>
+      {selectedFolder && (
+        <Text size="sm">
+          Selected folder: <Code>{selectedFolder}</Code>
+        </Text>
+      )}
+
+      {error && (
+        <Alert icon={<AlertCircle size={16} />} title="Error" color="red">
+          {error}
+        </Alert>
+      )}
+
+      {files.length > 0 && (
+        <Text size="sm" c="dimmed">
+          Found {files.length} video file{files.length !== 1 ? 's' : ''}
+        </Text>
+      )}
+
+      <FileTable files={files} onManualSearch={handleManualSearchTrigger} />
 
       <Modal opened={opened} onClose={close} title="Manual TMDB Search" size="lg">
         <Stack gap="md">
@@ -300,6 +249,6 @@ export function Home({ primaryColor, onPrimaryColorChange }: HomeProps) {
           </Stack>
         </Stack>
       </Modal>
-    </AppShell>
+    </Stack>
   );
 }
