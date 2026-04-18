@@ -12,9 +12,10 @@ import {
   Paper,
   Divider,
   Badge,
-  Loader
+  Loader,
+  Button
 } from '@mantine/core';
-import { Sun, Moon, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sun, Moon, CheckCircle2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
 interface SettingsProps {
@@ -59,6 +60,7 @@ export function Settings({ primaryColor, onPrimaryColorChange }: SettingsProps) 
                     <Button size="xs" variant="outline" color="red" component="a" href="https://mkvtoolnix.download/" target="_blank">Install MKVToolNix</Button>
                   </Tooltip>
                 )}
+              </Group>
             </Stack>
           )}
         </Stack>

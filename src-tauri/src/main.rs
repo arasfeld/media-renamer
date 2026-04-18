@@ -9,6 +9,7 @@ use walkdir::WalkDir;
 use reqwest;
 use which::which;
 use tauri_plugin_shell::ShellExt;
+use futures_util::TryFutureExt;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MediaFile {
@@ -80,6 +81,7 @@ async fn inspect_file(path: String, app: tauri::AppHandle) -> Result<String, Str
             &path
         ])
         .output()
+        .await
         .map_err(|e| e.to_string())?;
 
     if output.status.success() {
@@ -95,6 +97,7 @@ async fn scrub_metadata(path: String, app: tauri::AppHandle) -> Result<(), Strin
         .command("mkvpropedit")
         .args([&path, "--delete", "title"])
         .output()
+        .await
         .map_err(|e| e.to_string())?;
     
     Ok(())
@@ -114,6 +117,7 @@ async fn embed_subtitles(video_path: String, srt_path: String, app: tauri::AppHa
             &output_path
         ])
         .output()
+        .await
         .map_err(|e| e.to_string())?;
         
     fs::rename(output_path, video_path).map_err(|e| e.to_string())?;
@@ -134,6 +138,7 @@ async fn split_episode(path: String, start_time: String, duration: String, outpu
             &output_path
         ])
         .output()
+        .await
         .map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -157,10 +162,45 @@ async fn join_episodes(paths: Vec<String>, output_path: String, app: tauri::AppH
             &output_path
         ])
         .output()
+        .await
         .map_err(|e| e.to_string())?;
 
     fs::remove_file(list_path).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+async fn list_plex_libraries(server_url: String, token: String) -> Result<serde_json::Value, String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(format!("{}/library/sections", server_url))
+        .header("X-Plex-Token", token)
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| e.to_string())?;
+        
+    Ok(response)
+}
+
+#[tauri::command]
+async fn fetch_plex_show_metadata(server_url: String, token: String, rating_key: String) -> Result<serde_json::Value, String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(format!("{}/library/metadata/{}", server_url, rating_key))
+        .header("X-Plex-Token", token)
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| e.to_string())?;
+        
+    Ok(response)
 }
 
 #[tauri::command]
@@ -292,7 +332,9 @@ fn main() {
             scrub_metadata,
             embed_subtitles,
             split_episode,
-            join_episodes
+            join_episodes,
+            list_plex_libraries,
+            fetch_plex_show_metadata
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
