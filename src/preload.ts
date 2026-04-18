@@ -1,2 +1,10 @@
-// See the Electron documentation for details on how to use preload scripts:
-// https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
+import { contextBridge, ipcRenderer } from 'electron';
+import { IPC_CHANNELS, type ElectronAPI } from './types/ipc';
+
+const electronAPI: ElectronAPI = {
+  selectFolder: () => ipcRenderer.invoke(IPC_CHANNELS.SELECT_FOLDER),
+  scanFolder: (folderPath: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SCAN_FOLDER, folderPath),
+};
+
+contextBridge.exposeInMainWorld('electronAPI', electronAPI);
