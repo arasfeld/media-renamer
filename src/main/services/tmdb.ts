@@ -1,7 +1,14 @@
 import type { MediaMatch } from '../../types/media';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const API_KEY = process.env.TMDB_API_KEY;
+
+function getApiKey(): string {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    throw new Error('TMDB_API_KEY is not configured in .env');
+  }
+  return apiKey;
+}
 
 export interface TMDBSearchParams {
   query: string;
@@ -10,15 +17,12 @@ export interface TMDBSearchParams {
 }
 
 export async function searchMedia(params: TMDBSearchParams): Promise<MediaMatch[]> {
-  if (!API_KEY) {
-    throw new Error('TMDB_API_KEY is not configured in .env');
-  }
-
+  const apiKey = getApiKey();
   const { query, year, type } = params;
   const endpoint = type === 'movie' ? '/search/movie' : '/search/tv';
   
   const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
-  url.searchParams.append('api_key', API_KEY);
+  url.searchParams.append('api_key', apiKey);
   url.searchParams.append('query', query);
   url.searchParams.append('language', 'en-US');
   
@@ -49,12 +53,10 @@ export async function getEpisodeDetails(
   seasonNumber: number,
   episodeNumber: number
 ): Promise<Partial<MediaMatch>> {
-  if (!API_KEY) {
-    throw new Error('TMDB_API_KEY is not configured in .env');
-  }
+  const apiKey = getApiKey();
 
   const url = new URL(`${TMDB_BASE_URL}/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`);
-  url.searchParams.append('api_key', API_KEY);
+  url.searchParams.append('api_key', apiKey);
   url.searchParams.append('language', 'en-US');
 
   const response = await fetch(url.toString());
