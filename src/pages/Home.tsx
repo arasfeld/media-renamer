@@ -9,13 +9,15 @@ import {
   Loader,
   Code,
 } from '@mantine/core';
-import { Folder, ScanSearch, AlertCircle } from 'lucide-react';
+import { Folder, ScanSearch, AlertCircle, Database } from 'lucide-react';
 import { useFileSystem } from '../hooks/useFileSystem';
+import { useTMDB } from '../hooks/useTMDB';
 import { FileTable } from '../components/FileTable';
 
 export function Home() {
-  const { selectedFolder, files, isLoading, error, selectFolder, scanFolder } =
+  const { selectedFolder, files, isLoading, error, selectFolder, scanFolder, setFiles } =
     useFileSystem();
+  const { isMatching, matchFiles } = useTMDB();
 
   return (
     <AppShell header={{ height: 60 }} padding="md">

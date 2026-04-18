@@ -13,6 +13,7 @@ interface UseFileSystemActions {
   selectFolder: () => Promise<void>;
   scanFolder: () => Promise<void>;
   clearFiles: () => void;
+  setFiles: React.Dispatch<React.SetStateAction<ScannedFile[]>>;
 }
 
 export function useFileSystem(): UseFileSystemState & UseFileSystemActions {
@@ -72,12 +73,7 @@ export function useFileSystem(): UseFileSystemState & UseFileSystemActions {
     error,
     selectFolder,
     scanFolder,
-    setFiles,
-  };
-}
-   error,
-    selectFolder,
-    scanFolder,
     clearFiles,
+    setFiles,
   };
 }
