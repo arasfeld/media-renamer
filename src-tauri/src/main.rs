@@ -140,7 +140,7 @@ async fn search_media(params: SearchParams) -> Result<Vec<MediaMatch>, String> {
         MediaMatch {
             tmdb_id: r["id"].as_u64().unwrap_or(0) as u32,
             title: r[if params.media_type == "movie" { "title" } else { "name" }].as_str().unwrap_or("").to_string(),
-            year: None, // Simplified for now
+            year: None, 
             media_type: params.media_type.clone(),
             poster_path: r["poster_path"].as_str().map(|s| format!("https://image.tmdb.org/t/p/w92{}", s)),
             season_number: None,
@@ -172,7 +172,6 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_log::init())
         .invoke_handler(tauri::generate_handler![scan_folder, rename_files, search_media, get_episode_details])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

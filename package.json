@@ -20,6 +20,10 @@
   "dependencies": {
     "@mantine/core": "^9.0.2",
     "@mantine/hooks": "^9.0.2",
+    "@tauri-apps/plugin-dialog": "^2.7.0",
+    "@tauri-apps/plugin-fs": "^2.5.0",
+    "@tauri-apps/plugin-log": "^2.8.0",
+    "@tauri-apps/plugin-shell": "^2.3.5",
     "dotenv": "^17.4.2",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",
