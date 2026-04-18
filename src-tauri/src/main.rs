@@ -123,6 +123,47 @@ async fn embed_subtitles(video_path: String, srt_path: String, app: tauri::AppHa
 }
 
 #[tauri::command]
+async fn split_episode(path: String, start_time: String, duration: String, output_path: String, app: tauri::AppHandle) -> Result<(), String> {
+    app.shell()
+        .command("ffmpeg")
+        .args([
+            "-ss", &start_time,
+            "-i", &path,
+            "-t", &duration,
+            "-c", "copy",
+            &output_path
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn join_episodes(paths: Vec<String>, output_path: String, app: tauri::AppHandle) -> Result<(), String> {
+    let mut list_file = String::new();
+    for p in &paths {
+        list_file.push_str(&format!("file '{}'\n", p));
+    }
+    let list_path = "concat_list.txt";
+    fs::write(list_path, list_file).map_err(|e| e.to_string())?;
+
+    app.shell()
+        .command("ffmpeg")
+        .args([
+            "-f", "concat",
+            "-safe", "0",
+            "-i", list_path,
+            "-c", "copy",
+            &output_path
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    fs::remove_file(list_path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn scan_folder(folder_path: String) -> Result<Vec<MediaFile>, String> {
     let video_extensions = ["mp4", "mkv", "avi", "mov", "wmv", "m4v"];
     let mut results = Vec::new();
@@ -249,7 +290,9 @@ fn main() {
             check_dependencies,
             inspect_file,
             scrub_metadata,
-            embed_subtitles
+            embed_subtitles,
+            split_episode,
+            join_episodes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
