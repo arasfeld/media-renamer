@@ -1,7 +1,7 @@
-import { Drawer, Stack, Text, Group, Badge, ScrollArea, Button, LoadingOverlay } from '@mantine/core';
+import { Drawer, Stack, Text, Group, Badge, ScrollArea, Button, LoadingOverlay, TextInput, Divider } from '@mantine/core';
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, save } from '@tauri-apps/plugin-dialog';
 
 interface MediaTrack {
   codec_name: string;
@@ -25,6 +25,9 @@ interface MediaInspectorProps {
 
 export function MediaInspector({ opened, onClose, filePath, inspectorData }: MediaInspectorProps) {
   const [loading, setLoading] = useState(false);
+  const [splitStart, setSplitStart] = useState('00:00:00');
+  const [splitDuration, setSplitDuration] = useState('00:11:00');
+
   let streams: MediaTrack[] = [];
   try {
     if (inspectorData) {
@@ -64,6 +67,31 @@ export function MediaInspector({ opened, onClose, filePath, inspectorData }: Med
     }
   };
 
+  const handleSplit = async () => {
+    if (!filePath) return;
+    const outputPath = await save({
+      defaultPath: `${filePath.split('.').slice(0, -1).join('.')}_part.mkv`,
+      filters: [{ name: 'MKV', extensions: ['mkv'] }]
+    });
+    
+    if (!outputPath) return;
+    
+    setLoading(true);
+    try {
+      await invoke('split_episode', { 
+        path: filePath, 
+        startTime: splitStart, 
+        duration: splitDuration, 
+        outputPath 
+      });
+      alert("Episode split successfully!");
+    } catch (e) {
+      alert("Failed to split episode");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Drawer opened={opened} onClose={onClose} title="File Inspector" position="right" size="lg">
       <LoadingOverlay visible={loading} />
@@ -71,11 +99,22 @@ export function MediaInspector({ opened, onClose, filePath, inspectorData }: Med
         <Stack gap="md">
           <Text size="sm" c="dimmed" style={{ wordBreak: 'break-all' }}>{filePath}</Text>
           
+          <Divider label="Processing Tools" />
           <Group>
             <Button variant="light" color="orange" onClick={handleScrub}>Scrub Metadata</Button>
             <Button variant="light" color="blue" onClick={handleEmbedSubtitles}>Embed SRT</Button>
           </Group>
+
+          <Divider label="Split Episode" />
+          <Stack gap="xs">
+            <Group>
+              <TextInput label="Start Time" value={splitStart} onChange={(e) => setSplitStart(e.currentTarget.value)} />
+              <TextInput label="Duration" value={splitDuration} onChange={(e) => setSplitDuration(e.currentTarget.value)} />
+            </Group>
+            <Button variant="light" color="violet" onClick={handleSplit}>Split File</Button>
+          </Stack>
           
+          <Divider label="Media Tracks" />
           {streams.map((stream, idx) => (
             <Stack key={idx} p="md" style={{ border: '1px solid #eee', borderRadius: 8 }}>
               <Group justify="space-between">
