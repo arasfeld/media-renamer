@@ -8,6 +8,7 @@ use std::path::Path;
 use walkdir::WalkDir;
 use reqwest;
 use which::which;
+use tauri_plugin_shell::ShellExt;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MediaFile {
@@ -65,6 +66,26 @@ async fn check_dependencies() -> SystemDependencies {
     SystemDependencies {
         ffmpeg: which("ffmpeg").is_ok(),
         mkvpropedit: which("mkvpropedit").is_ok(),
+    }
+}
+
+#[tauri::command]
+async fn inspect_file(path: String, app: tauri::AppHandle) -> Result<String, String> {
+    let output = app.shell()
+        .command("ffprobe")
+        .args([
+            "-v", "error", 
+            "-show_streams", 
+            "-print_format", "json", 
+            &path
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
     }
 }
 
@@ -193,7 +214,8 @@ fn main() {
             rename_files, 
             search_media, 
             get_episode_details,
-            check_dependencies
+            check_dependencies,
+            inspect_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
