@@ -1,4 +1,4 @@
-import { Drawer, Stack, Text, Group, Badge, ScrollArea, Button, LoadingOverlay, TextInput, Divider } from '@mantine/core';
+import { Drawer, Stack, Text, Group, Badge, ScrollArea, Button, LoadingOverlay, TextInput, Divider, MultiSelect } from '@mantine/core';
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
@@ -27,6 +27,7 @@ export function MediaInspector({ opened, onClose, filePath, inspectorData }: Med
   const [loading, setLoading] = useState(false);
   const [splitStart, setSplitStart] = useState('00:00:00');
   const [splitDuration, setSplitDuration] = useState('00:11:00');
+  const [joinFiles, setJoinFiles] = useState<string[]>([]);
 
   let streams: MediaTrack[] = [];
   try {
@@ -92,6 +93,24 @@ export function MediaInspector({ opened, onClose, filePath, inspectorData }: Med
     }
   };
 
+  const handleJoin = async () => {
+    const outputPath = await save({
+      filters: [{ name: 'MKV', extensions: ['mkv'] }]
+    });
+    
+    if (!outputPath) return;
+    
+    setLoading(true);
+    try {
+      await invoke('join_episodes', { paths: joinFiles, outputPath });
+      alert("Episodes joined successfully!");
+    } catch (e) {
+      alert("Failed to join episodes");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Drawer opened={opened} onClose={onClose} title="File Inspector" position="right" size="lg">
       <LoadingOverlay visible={loading} />
@@ -112,6 +131,22 @@ export function MediaInspector({ opened, onClose, filePath, inspectorData }: Med
               <TextInput label="Duration" value={splitDuration} onChange={(e) => setSplitDuration(e.currentTarget.value)} />
             </Group>
             <Button variant="light" color="violet" onClick={handleSplit}>Split File</Button>
+          </Stack>
+          
+          <Divider label="Join Episodes" />
+          <Stack gap="xs">
+            <MultiSelect
+              label="Select Files to Join"
+              data={joinFiles}
+              placeholder="Add files to merge..."
+              creatable
+              getCreateLabel={(query) => `+ Add "${query}"`}
+              onCreate={(query) => {
+                setJoinFiles([...joinFiles, query]);
+                return query;
+              }}
+            />
+            <Button variant="light" color="teal" onClick={handleJoin}>Join Episodes</Button>
           </Stack>
           
           <Divider label="Media Tracks" />
