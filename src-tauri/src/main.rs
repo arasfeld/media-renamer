@@ -7,6 +7,7 @@ use std::fs;
 use std::path::Path;
 use walkdir::WalkDir;
 use reqwest;
+use which::which;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MediaFile {
@@ -51,6 +52,20 @@ pub struct SearchParams {
     query: String,
     year: Option<u32>,
     media_type: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SystemDependencies {
+    ffmpeg: bool,
+    mkvpropedit: bool,
+}
+
+#[tauri::command]
+async fn check_dependencies() -> SystemDependencies {
+    SystemDependencies {
+        ffmpeg: which("ffmpeg").is_ok(),
+        mkvpropedit: which("mkvpropedit").is_ok(),
+    }
 }
 
 #[tauri::command]
@@ -172,7 +187,14 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![scan_folder, rename_files, search_media, get_episode_details])
+        .plugin(tauri_plugin_log::init())
+        .invoke_handler(tauri::generate_handler![
+            scan_folder, 
+            rename_files, 
+            search_media, 
+            get_episode_details,
+            check_dependencies
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

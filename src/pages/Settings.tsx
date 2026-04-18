@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { 
   Stack, 
   Title, 
@@ -9,9 +10,12 @@ import {
   ActionIcon, 
   useMantineColorScheme,
   Paper,
-  Divider
+  Divider,
+  Badge,
+  Loader
 } from '@mantine/core';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, CheckCircle2, AlertCircle } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 
 interface SettingsProps {
   primaryColor: string;
@@ -23,11 +27,36 @@ const PRIMARY_COLORS = ['blue', 'cyan', 'teal', 'green', 'lime', 'yellow', 'oran
 export function Settings({ primaryColor, onPrimaryColorChange }: SettingsProps) {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const theme = useMantineTheme();
+  const [deps, setDeps] = useState<{ ffmpeg: boolean; mkvpropedit: boolean } | null>(null);
+
+  useEffect(() => {
+    invoke<{ ffmpeg: boolean; mkvpropedit: boolean }>('check_dependencies').then(setDeps);
+  }, []);
 
   return (
     <Stack gap="xl">
       <Title order={2}>Settings</Title>
       
+      <Paper withBorder p="md" radius="md">
+        <Stack gap="md">
+          <Title order={4}>System Dependencies</Title>
+          <Text size="sm" c="dimmed">Required for advanced media processing.</Text>
+          <Divider />
+          {!deps ? <Loader size="sm" /> : (
+            <Stack gap="xs">
+              <Group justify="space-between">
+                <Text>FFmpeg</Text>
+                {deps.ffmpeg ? <Badge color="green" leftSection={<CheckCircle2 size={12}/>}>Installed</Badge> : <Badge color="red" leftSection={<AlertCircle size={12}/>}>Missing</Badge>}
+              </Group>
+              <Group justify="space-between">
+                <Text>MKVPropEdit</Text>
+                {deps.mkvpropedit ? <Badge color="green" leftSection={<CheckCircle2 size={12}/>}>Installed</Badge> : <Badge color="red" leftSection={<AlertCircle size={12}/>}>Missing</Badge>}
+              </Group>
+            </Stack>
+          )}
+        </Stack>
+      </Paper>
+
       <Paper withBorder p="md" radius="md">
         <Stack gap="md">
           <Title order={4}>Appearance</Title>
