@@ -10,7 +10,6 @@ import {
   Code,
   Modal,
   TextInput,
-  SegmentedControl,
   UnstyledButton,
   Image,
 } from '@mantine/core';
@@ -20,6 +19,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useTMDB } from '../hooks/useTMDB';
 import { FileTable } from '../components/FileTable';
+import { MediaInspector } from '../components/MediaInspector';
 import { generateProposedFilename } from '../lib/parser';
 import type { ScannedFile, MediaMatch } from '../types/media';
 
@@ -31,7 +31,12 @@ export function Home() {
   
   // Modal state for manual search
   const [opened, { open, close }] = useDisclosure(false);
+  
+  // Inspector state
+  const [inspectorOpened, { open: openInspector, close: closeInspector }] = useDisclosure(false);
+  const [inspectorData, setInspectorData] = useState<string | null>(null);
   const [activeFile, setActiveFile] = useState<ScannedFile | null>(null);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<'movie' | 'tv'>('movie');
   const [searchResults, setSearchResults] = useState<MediaMatch[]>([]);
@@ -43,6 +48,17 @@ export function Home() {
     setSearchType(file.parsed.type === 'tv' ? 'tv' : 'movie');
     setSearchResults([]);
     open();
+  };
+
+  const handleInspectTrigger = async (file: ScannedFile) => {
+    setActiveFile(file);
+    try {
+      const data: string = await invoke('inspect_file', { path: file.file.path });
+      setInspectorData(data);
+      openInspector();
+    } catch (err) {
+      console.error('Inspection failed:', err);
+    }
   };
 
   const executeSearch = async () => {
@@ -69,16 +85,16 @@ export function Home() {
       activeFile.parsed.episode !== null
     ) {
       try {
-        // Updated to use invoke for episode details if we moved that to Rust
-        // For now, we'll keep it as is since we didn't implement get_episode_details in Rust yet
-        // If we kept it in frontend fetch, we use searchManual logic
-        const details = await window.fetch(`https://api.themoviedb.org/3/tv/${match.tmdbId}/season/${activeFile.parsed.season}/episode/${activeFile.parsed.episode}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=en-US`);
-        const data = await details.json();
+        const details: any = await invoke('get_episode_details', {
+          tvId: match.tmdbId,
+          seasonNumber: activeFile.parsed.season,
+          episodeNumber: activeFile.parsed.episode,
+        });
         finalMatch = { 
           ...match, 
-          episodeTitle: data.name,
-          seasonNumber: data.season_number,
-          episodeNumber: data.episode_number,
+          episodeTitle: details.name,
+          seasonNumber: details.season_number,
+          episodeNumber: details.episode_number,
         };
       } catch (err) {
         console.error('Failed to get episode details:', err);
@@ -100,8 +116,6 @@ export function Home() {
       .map((f) => {
         const proposed = generateProposedFilename(f);
         if (proposed && f.matchStatus === 'matched') {
-          // Cross-platform path handling is better done in Rust, 
-          // but we'll send the strings for now.
           const separator = f.file.path.includes('\\') ? '\\' : '/';
           const dir = f.file.path.substring(0, f.file.path.lastIndexOf(separator));
           return {
@@ -197,7 +211,18 @@ export function Home() {
         </Text>
       )}
 
-      <FileTable files={files} onManualSearch={handleManualSearchTrigger} />
+      <FileTable 
+        files={files} 
+        onManualSearch={handleManualSearchTrigger} 
+        onInspect={handleInspectTrigger}
+      />
+
+      <MediaInspector 
+        opened={inspectorOpened} 
+        onClose={closeInspector} 
+        filePath={activeFile?.file.path || null}
+        inspectorData={inspectorData}
+      />
 
       <Modal opened={opened} onClose={close} title="Manual TMDB Search" size="lg">
         <Stack gap="md">
@@ -209,6 +234,14 @@ export function Home() {
               onChange={(e) => setSearchQuery(e.currentTarget.value)}
               style={{ flex: 1 }}
               onKeyDown={(e) => e.key === 'Enter' && executeSearch()}
+            />
+            <SegmentedControl
+              data={[
+                { label: 'Movie', value: 'movie' },
+                { label: 'TV Show', value: 'tv' },
+              ]}
+              value={searchType}
+              onChange={(value) => setSearchType(value as 'movie' | 'tv')}
             />
             <Button onClick={executeSearch} loading={isSearching}>
               <Search size={16} />

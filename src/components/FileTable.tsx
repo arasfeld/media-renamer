@@ -1,11 +1,12 @@
 import { Table, Badge, Text, Group, Tooltip, ActionIcon, Loader, Stack } from '@mantine/core';
-import { Check, AlertCircle, Search, Info, ArrowRight } from 'lucide-react';
+import { Check, AlertCircle, Search, Info, ArrowRight, FileVideo } from 'lucide-react';
 import type { ScannedFile } from '../types/media';
 import { generateProposedFilename } from '../lib/parser';
 
 interface FileTableProps {
   files: ScannedFile[];
   onManualSearch: (file: ScannedFile) => void;
+  onInspect: (file: ScannedFile) => void;
 }
 
 function formatFileSize(bytes: number): string {
@@ -55,7 +56,7 @@ function StatusIndicator({ status }: { status: ScannedFile['matchStatus'] }) {
   }
 }
 
-export function FileTable({ files, onManualSearch }: FileTableProps) {
+export function FileTable({ files, onManualSearch, onInspect }: FileTableProps) {
   if (files.length === 0) {
     return (
       <Text c="dimmed" ta="center" py="xl">
@@ -126,6 +127,16 @@ export function FileTable({ files, onManualSearch }: FileTableProps) {
         </Table.Td>
         <Table.Td>
           <Group gap="xs">
+            <Tooltip label="Inspect Metadata">
+              <ActionIcon 
+                variant="subtle" 
+                color="gray" 
+                size="sm"
+                onClick={() => onInspect(scannedFile)}
+              >
+                <FileVideo size={14} />
+              </ActionIcon>
+            </Tooltip>
             {match && (
               <Tooltip label={`TMDB ID: ${match.tmdbId}`}>
                 <ActionIcon variant="subtle" color="gray" size="sm">
@@ -160,7 +171,7 @@ export function FileTable({ files, onManualSearch }: FileTableProps) {
           <Table.Th>Meta</Table.Th>
           <Table.Th>Quality</Table.Th>
           <Table.Th>Size</Table.Th>
-          <Table.Th style={{ width: 80 }}>Actions</Table.Th>
+          <Table.Th style={{ width: 100 }}>Actions</Table.Th>
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>{rows}</Table.Tbody>
