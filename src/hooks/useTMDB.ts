@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import type { ScannedFile, MediaMatch } from '../types/media';
 
 interface UseTMDBState {
@@ -19,18 +20,15 @@ export function useTMDB(): UseTMDBState & UseTMDBActions {
   const matchFiles = useCallback(
     async (
       files: ScannedFile[],
-      setFiles: (updater: (prev: ScannedFile[]) => ScannedFile[]) => void
+      setFiles: React.Dispatch<React.SetStateAction<ScannedFile[]>>
     ) => {
       setIsMatching(true);
 
-      // Simple sequential matching for now to avoid hitting rate limits too hard
-      // and to provide incremental updates to the UI
       for (const scannedFile of files) {
         if (scannedFile.matchStatus === 'matched' || !scannedFile.parsed.title) {
           continue;
         }
 
-        // Update status to searching
         setFiles((prev) =>
           prev.map((f) =>
             f.file.path === scannedFile.file.path
@@ -40,27 +38,28 @@ export function useTMDB(): UseTMDBState & UseTMDBActions {
         );
 
         try {
-          const results = await window.electronAPI.searchMedia({
-            query: scannedFile.parsed.title,
-            year: scannedFile.parsed.year || undefined,
-            type: scannedFile.parsed.type === 'tv' ? 'tv' : 'movie',
+          const results: MediaMatch[] = await invoke('search_media', {
+            params: {
+              query: scannedFile.parsed.title,
+              year: scannedFile.parsed.year || undefined,
+              media_type: scannedFile.parsed.type === 'tv' ? 'tv' : 'movie',
+            }
           });
 
           if (results.length > 0) {
             let match = results[0];
 
-            // If it's a TV show, we also want the episode title
             if (
               scannedFile.parsed.type === 'tv' &&
               scannedFile.parsed.season !== null &&
               scannedFile.parsed.episode !== null
             ) {
               try {
-                const details = await window.electronAPI.getEpisodeDetails(
-                  match.tmdbId,
-                  scannedFile.parsed.season,
-                  scannedFile.parsed.episode
-                );
+                const details: Partial<MediaMatch> = await invoke('get_episode_details', {
+                  tvId: match.tmdbId,
+                  seasonNumber: scannedFile.parsed.season,
+                  episodeNumber: scannedFile.parsed.episode,
+                });
                 match = { ...match, ...details };
               } catch (err) {
                 console.error('Failed to get episode details:', err);
@@ -78,7 +77,7 @@ export function useTMDB(): UseTMDBState & UseTMDBActions {
             setFiles((prev) =>
               prev.map((f) =>
                 f.file.path === scannedFile.file.path
-                  ? { ...f, matchStatus: 'none' } // Or maybe 'not_found'
+                  ? { ...f, matchStatus: 'none' }
                   : f
               )
             );
@@ -102,7 +101,9 @@ export function useTMDB(): UseTMDBState & UseTMDBActions {
 
   const searchManual = useCallback(
     async (query: string, type: 'tv' | 'movie', year?: number) => {
-      return window.electronAPI.searchMedia({ query, type, year });
+      return invoke('search_media', {
+        params: { query, media_type: type, year }
+      });
     },
     []
   );

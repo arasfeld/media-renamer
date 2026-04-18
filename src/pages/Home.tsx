@@ -16,6 +16,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { Folder, ScanSearch, AlertCircle, Database, Search, CheckCircle2 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useTMDB } from '../hooks/useTMDB';
 import { FileTable } from '../components/FileTable';
@@ -68,12 +69,17 @@ export function Home() {
       activeFile.parsed.episode !== null
     ) {
       try {
-        const details = await window.electronAPI.getEpisodeDetails(
-          match.tmdbId,
-          activeFile.parsed.season,
-          activeFile.parsed.episode
-        );
-        finalMatch = { ...match, ...details };
+        // Updated to use invoke for episode details if we moved that to Rust
+        // For now, we'll keep it as is since we didn't implement get_episode_details in Rust yet
+        // If we kept it in frontend fetch, we use searchManual logic
+        const details = await window.fetch(`https://api.themoviedb.org/3/tv/${match.tmdbId}/season/${activeFile.parsed.season}/episode/${activeFile.parsed.episode}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=en-US`);
+        const data = await details.json();
+        finalMatch = { 
+          ...match, 
+          episodeTitle: data.name,
+          seasonNumber: data.season_number,
+          episodeNumber: data.episode_number,
+        };
       } catch (err) {
         console.error('Failed to get episode details:', err);
       }
@@ -94,11 +100,13 @@ export function Home() {
       .map((f) => {
         const proposed = generateProposedFilename(f);
         if (proposed && f.matchStatus === 'matched') {
-          // Get the directory path from the original file path
-          const dir = f.file.path.substring(0, f.file.path.lastIndexOf('/'));
+          // Cross-platform path handling is better done in Rust, 
+          // but we'll send the strings for now.
+          const separator = f.file.path.includes('\\') ? '\\' : '/';
+          const dir = f.file.path.substring(0, f.file.path.lastIndexOf(separator));
           return {
             from: f.file.path,
-            to: `${dir}/${proposed}`,
+            to: `${dir}${separator}${proposed}`,
           };
         }
         return null;
@@ -109,7 +117,10 @@ export function Home() {
 
     setIsRenaming(true);
     try {
-      const result = await window.electronAPI.renameFiles(renamesToExecute);
+      const result: { success: boolean; error?: string } = await invoke('rename_files', {
+        renames: renamesToExecute,
+      });
+      
       if (result.success) {
         await scanFolder();
       } else {
@@ -117,6 +128,7 @@ export function Home() {
       }
     } catch (err) {
       console.error('Rename execution failed:', err);
+      alert(`Rename execution failed: ${err}`);
     } finally {
       setIsRenaming(false);
     }
@@ -197,14 +209,6 @@ export function Home() {
               onChange={(e) => setSearchQuery(e.currentTarget.value)}
               style={{ flex: 1 }}
               onKeyDown={(e) => e.key === 'Enter' && executeSearch()}
-            />
-            <SegmentedControl
-              data={[
-                { label: 'Movie', value: 'movie' },
-                { label: 'TV Show', value: 'tv' },
-              ]}
-              value={searchType}
-              onChange={(value) => setSearchType(value as 'movie' | 'tv')}
             />
             <Button onClick={executeSearch} loading={isSearching}>
               <Search size={16} />

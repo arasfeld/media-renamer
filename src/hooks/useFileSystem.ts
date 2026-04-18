@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 import type { MediaFile, ScannedFile } from '../types/media';
 import { parseFilename } from '../lib/parser';
 
@@ -25,9 +27,14 @@ export function useFileSystem(): UseFileSystemState & UseFileSystemActions {
   const selectFolder = useCallback(async () => {
     setError(null);
     try {
-      const folder = await window.electronAPI.selectFolder();
-      if (folder) {
-        setSelectedFolder(folder);
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select folder to scan',
+      });
+
+      if (selected && typeof selected === 'string') {
+        setSelectedFolder(selected);
         setFiles([]);
       }
     } catch (err) {
@@ -45,8 +52,10 @@ export function useFileSystem(): UseFileSystemState & UseFileSystemActions {
     setError(null);
 
     try {
-      const mediaFiles: MediaFile[] =
-        await window.electronAPI.scanFolder(selectedFolder);
+      // Call Rust command
+      const mediaFiles: MediaFile[] = await invoke('scan_folder', {
+        folderPath: selectedFolder,
+      });
 
       const scannedFiles: ScannedFile[] = mediaFiles.map((file) => ({
         file,
