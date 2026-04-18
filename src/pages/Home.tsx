@@ -10,6 +10,7 @@ import {
   Code,
   Modal,
   TextInput,
+  SegmentedControl,
   UnstyledButton,
   Image,
 } from '@mantine/core';

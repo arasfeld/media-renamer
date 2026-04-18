@@ -90,6 +90,39 @@ async fn inspect_file(path: String, app: tauri::AppHandle) -> Result<String, Str
 }
 
 #[tauri::command]
+async fn scrub_metadata(path: String, app: tauri::AppHandle) -> Result<(), String> {
+    app.shell()
+        .command("mkvpropedit")
+        .args([&path, "--delete", "title"])
+        .output()
+        .map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn embed_subtitles(video_path: String, srt_path: String, app: tauri::AppHandle) -> Result<(), String> {
+    let output_path = format!("{}.temp.mkv", video_path);
+    
+    app.shell()
+        .command("ffmpeg")
+        .args([
+            "-i", &video_path,
+            "-i", &srt_path,
+            "-c", "copy",
+            "-c:s", "srt",
+            &output_path
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+        
+    fs::rename(output_path, video_path).map_err(|e| e.to_string())?;
+    fs::remove_file(srt_path).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[tauri::command]
 async fn scan_folder(folder_path: String) -> Result<Vec<MediaFile>, String> {
     let video_extensions = ["mp4", "mkv", "avi", "mov", "wmv", "m4v"];
     let mut results = Vec::new();
@@ -208,14 +241,15 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_log::init())
         .invoke_handler(tauri::generate_handler![
             scan_folder, 
             rename_files, 
             search_media, 
             get_episode_details,
             check_dependencies,
-            inspect_file
+            inspect_file,
+            scrub_metadata,
+            embed_subtitles
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
