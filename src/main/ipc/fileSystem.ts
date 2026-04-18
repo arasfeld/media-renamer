@@ -1,6 +1,6 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import { IPC_CHANNELS } from '../../types/ipc';
-import { scanFolder } from '../services/scanner';
+import { scanFolder, renameFiles } from '../services/scanner';
 
 /**
  * Registers file system related IPC handlers
@@ -25,4 +25,12 @@ export function registerFileSystemHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.SCAN_FOLDER, async (_event, folderPath: string) => {
     return scanFolder(folderPath);
   });
+
+  // Handle file renaming
+  ipcMain.handle(
+    IPC_CHANNELS.RENAME_FILES,
+    async (_event, renames: { from: string; to: string }[]) => {
+      return renameFiles(renames);
+    }
+  );
 }

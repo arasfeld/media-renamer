@@ -50,3 +50,26 @@ async function scanDirectory(
     }
   }
 }
+
+/**
+ * Renames a list of files
+ */
+export async function renameFiles(
+  renames: { from: string; to: string }[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    for (const { from, to } of renames) {
+      // Ensure the destination directory exists (though it should in most cases)
+      const destDir = path.dirname(to);
+      await fs.mkdir(destDir, { recursive: true });
+      await fs.rename(from, to);
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('Renaming failed:', err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error during renaming',
+    };
+  }
+}

@@ -1,4 +1,4 @@
-import type { ParsedFilename } from '../types/media';
+import type { ParsedFilename, ScannedFile } from '../types/media';
 
 /** Quality patterns to detect */
 const QUALITY_PATTERNS = [
@@ -239,4 +239,30 @@ export function parseFilename(filename: string): ParsedFilename {
     quality,
     unparsedTokens: getUnparsedTokens(normalized, title, quality),
   };
+}
+
+/**
+ * Generate a proposed filename based on matched metadata
+ */
+export function generateProposedFilename(
+  scannedFile: ScannedFile
+): string | null {
+  const { match, file, parsed } = scannedFile;
+  if (!match) return null;
+
+  const extension = file.extension;
+
+  if (match.type === 'movie') {
+    return `${match.title} (${match.year}).${extension}`;
+  }
+
+  if (match.type === 'tv') {
+    const s = String(match.seasonNumber ?? parsed.season ?? 1).padStart(2, '0');
+    const e = String(match.episodeNumber ?? parsed.episode ?? 1).padStart(2, '0');
+    const episodeTitle = match.episodeTitle ? ` - ${match.episodeTitle}` : '';
+    
+    return `${match.title} - S${s}E${e}${episodeTitle}.${extension}`;
+  }
+
+  return null;
 }

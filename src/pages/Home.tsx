@@ -16,16 +16,18 @@ import {
   Image,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { Folder, ScanSearch, AlertCircle, Database, Search } from 'lucide-react';
+import { Folder, ScanSearch, AlertCircle, Database, Search, CheckCircle2 } from 'lucide-react';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useTMDB } from '../hooks/useTMDB';
 import { FileTable } from '../components/FileTable';
+import { generateProposedFilename } from '../lib/parser';
 import type { ScannedFile, MediaMatch } from '../types/media';
 
 export function Home() {
   const { selectedFolder, files, isLoading, error, selectFolder, scanFolder, setFiles } =
     useFileSystem();
   const { isMatching, matchFiles, searchManual } = useTMDB();
+  const [isRenaming, setIsRenaming] = useState(false);
   
   // Modal state for manual search
   const [opened, { open, close }] = useDisclosure(false);
@@ -61,7 +63,6 @@ export function Home() {
 
     let finalMatch = match;
     
-    // If it's a TV show and we have episode info, try to get episode details
     if (
       match.type === 'tv' &&
       activeFile.parsed.season !== null &&
@@ -89,6 +90,41 @@ export function Home() {
     close();
   };
 
+  const executeRenames = async () => {
+    const renamesToExecute = files
+      .map((f) => {
+        const proposed = generateProposedFilename(f);
+        if (proposed && f.matchStatus === 'matched') {
+          // Get the directory path from the original file path
+          const dir = f.file.path.substring(0, f.file.path.lastIndexOf('/'));
+          return {
+            from: f.file.path,
+            to: `${dir}/${proposed}`,
+          };
+        }
+        return null;
+      })
+      .filter((r): r is { from: string; to: string } => r !== null);
+
+    if (renamesToExecute.length === 0) return;
+
+    setIsRenaming(true);
+    try {
+      const result = await window.electronAPI.renameFiles(renamesToExecute);
+      if (result.success) {
+        await scanFolder();
+      } else {
+        alert(`Renaming failed: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('Rename execution failed:', err);
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  const matchedCount = files.filter(f => f.matchStatus === 'matched').length;
+
   return (
     <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header p="md">
@@ -110,7 +146,7 @@ export function Home() {
             <Button
               leftSection={isLoading ? <Loader size={16} /> : <ScanSearch size={16} />}
               onClick={scanFolder}
-              disabled={!selectedFolder || isLoading || isMatching}
+              disabled={!selectedFolder || isLoading || isMatching || isRenaming}
             >
               Scan
             </Button>
@@ -118,11 +154,21 @@ export function Home() {
               <Button
                 leftSection={isMatching ? <Loader size={16} /> : <Database size={16} />}
                 onClick={() => matchFiles(files, setFiles)}
-                disabled={isLoading || isMatching}
+                disabled={isLoading || isMatching || isRenaming}
                 variant="light"
                 color="blue"
               >
                 Match with TMDB
+              </Button>
+            )}
+            {matchedCount > 0 && (
+              <Button
+                leftSection={isRenaming ? <Loader size={16} /> : <CheckCircle2 size={16} />}
+                onClick={executeRenames}
+                disabled={isLoading || isMatching || isRenaming}
+                color="green"
+              >
+                Rename {matchedCount} File{matchedCount !== 1 ? 's' : ''}
               </Button>
             )}
           </Group>

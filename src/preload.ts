@@ -5,6 +5,7 @@ const electronAPI: ElectronAPI = {
   selectFolder: () => ipcRenderer.invoke(IPC_CHANNELS.SELECT_FOLDER),
   scanFolder: (folderPath: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.SCAN_FOLDER, folderPath),
+  renameFiles: (renames) => ipcRenderer.invoke(IPC_CHANNELS.RENAME_FILES, renames),
   searchMedia: (params) => ipcRenderer.invoke(IPC_CHANNELS.SEARCH_MEDIA, params),
   getEpisodeDetails: (tvId, season, episode) =>
     ipcRenderer.invoke(IPC_CHANNELS.GET_EPISODE_DETAILS, tvId, season, episode),

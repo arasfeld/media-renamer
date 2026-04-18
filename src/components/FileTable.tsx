@@ -1,6 +1,7 @@
 import { Table, Badge, Text, Group, Tooltip, ActionIcon, Loader, Stack } from '@mantine/core';
-import { Check, AlertCircle, Search, Info } from 'lucide-react';
+import { Check, AlertCircle, Search, Info, ArrowRight } from 'lucide-react';
 import type { ScannedFile } from '../types/media';
+import { generateProposedFilename } from '../lib/parser';
 
 interface FileTableProps {
   files: ScannedFile[];
@@ -75,6 +76,8 @@ export function FileTable({ files, onManualSearch }: FileTableProps) {
       ? (match.type === 'tv' ? `S${match.seasonNumber}E${match.episodeNumber}` : match.year)
       : (episodeInfo || parsed.year || '-');
 
+    const proposed = generateProposedFilename(scannedFile);
+
     return (
       <Table.Tr key={file.path}>
         <Table.Td>
@@ -84,6 +87,18 @@ export function FileTable({ files, onManualSearch }: FileTableProps) {
               {file.filename}
             </Text>
           </Group>
+        </Table.Td>
+        <Table.Td>
+          {proposed ? (
+            <Group gap="xs" wrap="nowrap">
+              <ArrowRight size={14} color="blue" />
+              <Text size="sm" c="blue" fw={500} lineClamp={1} title={proposed}>
+                {proposed}
+              </Text>
+            </Group>
+          ) : (
+            <Text size="sm" c="dimmed">No match</Text>
+          )}
         </Table.Td>
         <Table.Td>
           <TypeBadge type={match?.type || parsed.type} />
@@ -138,7 +153,8 @@ export function FileTable({ files, onManualSearch }: FileTableProps) {
     <Table striped highlightOnHover>
       <Table.Thead>
         <Table.Tr>
-          <Table.Th>Filename</Table.Th>
+          <Table.Th>Original Filename</Table.Th>
+          <Table.Th>Proposed Filename</Table.Th>
           <Table.Th>Type</Table.Th>
           <Table.Th>Match Title</Table.Th>
           <Table.Th>Meta</Table.Th>
