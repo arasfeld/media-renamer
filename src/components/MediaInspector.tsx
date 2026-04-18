@@ -1,4 +1,7 @@
-import { Drawer, Stack, Text, Group, Badge, ScrollArea } from '@mantine/core';
+import { Drawer, Stack, Text, Group, Badge, ScrollArea, Button, LoadingOverlay } from '@mantine/core';
+import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 
 interface MediaTrack {
   codec_name: string;
@@ -21,6 +24,7 @@ interface MediaInspectorProps {
 }
 
 export function MediaInspector({ opened, onClose, filePath, inspectorData }: MediaInspectorProps) {
+  const [loading, setLoading] = useState(false);
   let streams: MediaTrack[] = [];
   try {
     if (inspectorData) {
@@ -31,11 +35,46 @@ export function MediaInspector({ opened, onClose, filePath, inspectorData }: Med
     console.error("Failed to parse inspector data", e);
   }
 
+  const handleScrub = async () => {
+    if (!filePath) return;
+    setLoading(true);
+    try {
+      await invoke('scrub_metadata', { path: filePath });
+      alert("Metadata scrubbed successfully!");
+    } catch (e) {
+      alert("Failed to scrub metadata");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmbedSubtitles = async () => {
+    if (!filePath) return;
+    const srtPath = await open({ filters: [{ name: 'Subtitles', extensions: ['srt'] }] });
+    if (!srtPath || typeof srtPath !== 'string') return;
+    
+    setLoading(true);
+    try {
+      await invoke('embed_subtitles', { videoPath: filePath, srtPath });
+      alert("Subtitles embedded successfully!");
+    } catch (e) {
+      alert("Failed to embed subtitles");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Drawer opened={opened} onClose={onClose} title="File Inspector" position="right" size="lg">
-      <ScrollArea h="calc(100vh - 80px)">
+      <LoadingOverlay visible={loading} />
+      <ScrollArea h="calc(100vh - 120px)">
         <Stack gap="md">
           <Text size="sm" c="dimmed" style={{ wordBreak: 'break-all' }}>{filePath}</Text>
+          
+          <Group>
+            <Button variant="light" color="orange" onClick={handleScrub}>Scrub Metadata</Button>
+            <Button variant="light" color="blue" onClick={handleEmbedSubtitles}>Embed SRT</Button>
+          </Group>
           
           {streams.map((stream, idx) => (
             <Stack key={idx} p="md" style={{ border: '1px solid #eee', borderRadius: 8 }}>

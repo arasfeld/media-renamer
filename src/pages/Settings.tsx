@@ -46,12 +46,19 @@ export function Settings({ primaryColor, onPrimaryColorChange }: SettingsProps) 
             <Stack gap="xs">
               <Group justify="space-between">
                 <Text>FFmpeg</Text>
-                {deps.ffmpeg ? <Badge color="green" leftSection={<CheckCircle2 size={12}/>}>Installed</Badge> : <Badge color="red" leftSection={<AlertCircle size={12}/>}>Missing</Badge>}
+                {deps.ffmpeg ? <Badge color="green" leftSection={<CheckCircle2 size={12}/>}>Installed</Badge> : (
+                  <Tooltip label="Download from ffmpeg.org">
+                    <Button size="xs" variant="outline" color="red" component="a" href="https://ffmpeg.org/download.html" target="_blank">Install FFmpeg</Button>
+                  </Tooltip>
+                )}
               </Group>
               <Group justify="space-between">
                 <Text>MKVPropEdit</Text>
-                {deps.mkvpropedit ? <Badge color="green" leftSection={<CheckCircle2 size={12}/>}>Installed</Badge> : <Badge color="red" leftSection={<AlertCircle size={12}/>}>Missing</Badge>}
-              </Group>
+                {deps.mkvpropedit ? <Badge color="green" leftSection={<CheckCircle2 size={12}/>}>Installed</Badge> : (
+                  <Tooltip label="Download from mkvtoolnix.download">
+                    <Button size="xs" variant="outline" color="red" component="a" href="https://mkvtoolnix.download/" target="_blank">Install MKVToolNix</Button>
+                  </Tooltip>
+                )}
             </Stack>
           )}
         </Stack>
