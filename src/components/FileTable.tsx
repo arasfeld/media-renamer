@@ -4,6 +4,7 @@ import type { ScannedFile } from '../types/media';
 
 interface FileTableProps {
   files: ScannedFile[];
+  onManualSearch: (file: ScannedFile) => void;
 }
 
 function formatFileSize(bytes: number): string {
@@ -53,7 +54,7 @@ function StatusIndicator({ status }: { status: ScannedFile['matchStatus'] }) {
   }
 }
 
-export function FileTable({ files }: FileTableProps) {
+export function FileTable({ files, onManualSearch }: FileTableProps) {
   if (files.length === 0) {
     return (
       <Text c="dimmed" ta="center" py="xl">
@@ -109,13 +110,25 @@ export function FileTable({ files }: FileTableProps) {
           <Text size="sm">{formatFileSize(file.size)}</Text>
         </Table.Td>
         <Table.Td>
-          {match && (
-            <Tooltip label={`TMDB ID: ${match.tmdbId}`}>
-              <ActionIcon variant="subtle" color="gray" size="sm">
-                <Info size={14} />
+          <Group gap="xs">
+            {match && (
+              <Tooltip label={`TMDB ID: ${match.tmdbId}`}>
+                <ActionIcon variant="subtle" color="gray" size="sm">
+                  <Info size={14} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+            <Tooltip label="Manual Search">
+              <ActionIcon 
+                variant="subtle" 
+                color="blue" 
+                size="sm"
+                onClick={() => onManualSearch(scannedFile)}
+              >
+                <Search size={14} />
               </ActionIcon>
             </Tooltip>
-          )}
+          </Group>
         </Table.Td>
       </Table.Tr>
     );
@@ -131,7 +144,7 @@ export function FileTable({ files }: FileTableProps) {
           <Table.Th>Meta</Table.Th>
           <Table.Th>Quality</Table.Th>
           <Table.Th>Size</Table.Th>
-          <Table.Th style={{ width: 40 }}></Table.Th>
+          <Table.Th style={{ width: 80 }}>Actions</Table.Th>
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>{rows}</Table.Tbody>

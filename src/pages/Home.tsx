@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   AppShell,
   Button,
@@ -8,16 +9,85 @@ import {
   Alert,
   Loader,
   Code,
+  Modal,
+  TextInput,
+  SegmentedControl,
+  UnstyledButton,
+  Image,
 } from '@mantine/core';
-import { Folder, ScanSearch, AlertCircle, Database } from 'lucide-react';
+import { useDisclosure } from '@mantine/hooks';
+import { Folder, ScanSearch, AlertCircle, Database, Search } from 'lucide-react';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useTMDB } from '../hooks/useTMDB';
 import { FileTable } from '../components/FileTable';
+import type { ScannedFile, MediaMatch } from '../types/media';
 
 export function Home() {
   const { selectedFolder, files, isLoading, error, selectFolder, scanFolder, setFiles } =
     useFileSystem();
-  const { isMatching, matchFiles } = useTMDB();
+  const { isMatching, matchFiles, searchManual } = useTMDB();
+  
+  // Modal state for manual search
+  const [opened, { open, close }] = useDisclosure(false);
+  const [activeFile, setActiveFile] = useState<ScannedFile | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState<'movie' | 'tv'>('movie');
+  const [searchResults, setSearchResults] = useState<MediaMatch[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const handleManualSearchTrigger = (file: ScannedFile) => {
+    setActiveFile(file);
+    setSearchQuery(file.parsed.title || '');
+    setSearchType(file.parsed.type === 'tv' ? 'tv' : 'movie');
+    setSearchResults([]);
+    open();
+  };
+
+  const executeSearch = async () => {
+    if (!searchQuery) return;
+    setIsSearching(true);
+    try {
+      const results = await searchManual(searchQuery, searchType);
+      setSearchResults(results);
+    } catch (err) {
+      console.error('Search failed:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const selectMatch = async (match: MediaMatch) => {
+    if (!activeFile) return;
+
+    let finalMatch = match;
+    
+    // If it's a TV show and we have episode info, try to get episode details
+    if (
+      match.type === 'tv' &&
+      activeFile.parsed.season !== null &&
+      activeFile.parsed.episode !== null
+    ) {
+      try {
+        const details = await window.electronAPI.getEpisodeDetails(
+          match.tmdbId,
+          activeFile.parsed.season,
+          activeFile.parsed.episode
+        );
+        finalMatch = { ...match, ...details };
+      } catch (err) {
+        console.error('Failed to get episode details:', err);
+      }
+    }
+
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.file.path === activeFile.file.path
+          ? { ...f, matchStatus: 'matched', match: finalMatch }
+          : f
+      )
+    );
+    close();
+  };
 
   return (
     <AppShell header={{ height: 60 }} padding="md">
@@ -64,11 +134,7 @@ export function Home() {
           )}
 
           {error && (
-            <Alert
-              icon={<AlertCircle size={16} />}
-              title="Error"
-              color="red"
-            >
+            <Alert icon={<AlertCircle size={16} />} title="Error" color="red">
               {error}
             </Alert>
           )}
@@ -79,9 +145,72 @@ export function Home() {
             </Text>
           )}
 
-          <FileTable files={files} />
+          <FileTable files={files} onManualSearch={handleManualSearchTrigger} />
         </Stack>
       </AppShell.Main>
+
+      <Modal opened={opened} onClose={close} title="Manual TMDB Search" size="lg">
+        <Stack gap="md">
+          <Group align="flex-end">
+            <TextInput
+              label="Search Query"
+              placeholder="Movie or Show Title"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.currentTarget.value)}
+              style={{ flex: 1 }}
+              onKeyDown={(e) => e.key === 'Enter' && executeSearch()}
+            />
+            <SegmentedControl
+              data={[
+                { label: 'Movie', value: 'movie' },
+                { label: 'TV Show', value: 'tv' },
+              ]}
+              value={searchType}
+              onChange={(value) => setSearchType(value as 'movie' | 'tv')}
+            />
+            <Button onClick={executeSearch} loading={isSearching}>
+              <Search size={16} />
+            </Button>
+          </Group>
+
+          <Stack gap="xs" style={{ maxHeight: 400, overflowY: 'auto' }}>
+            {searchResults.map((result) => (
+              <UnstyledButton
+                key={result.tmdbId}
+                onClick={() => selectMatch(result)}
+                p="xs"
+                style={(theme) => ({
+                  borderRadius: theme.radius.sm,
+                  '&:hover': {
+                    backgroundColor: theme.colors.gray[0],
+                  },
+                })}
+              >
+                <Group gap="md">
+                  {result.posterPath ? (
+                    <Image src={result.posterPath} width={40} height={60} radius="xs" />
+                  ) : (
+                    <div style={{ width: 40, height: 60, backgroundColor: '#eee' }} />
+                  )}
+                  <Stack gap={0}>
+                    <Text size="sm" fw={500}>
+                      {result.title}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {result.year || 'Unknown Year'}
+                    </Text>
+                  </Stack>
+                </Group>
+              </UnstyledButton>
+            ))}
+            {searchResults.length === 0 && !isSearching && searchQuery && (
+              <Text ta="center" size="sm" c="dimmed" py="xl">
+                No results found. Try a different search term.
+              </Text>
+            )}
+          </Stack>
+        </Stack>
+      </Modal>
     </AppShell>
   );
 }
