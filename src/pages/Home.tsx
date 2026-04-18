@@ -38,10 +38,21 @@ export function Home() {
             <Button
               leftSection={isLoading ? <Loader size={16} /> : <ScanSearch size={16} />}
               onClick={scanFolder}
-              disabled={!selectedFolder || isLoading}
+              disabled={!selectedFolder || isLoading || isMatching}
             >
               Scan
             </Button>
+            {files.length > 0 && (
+              <Button
+                leftSection={isMatching ? <Loader size={16} /> : <Database size={16} />}
+                onClick={() => matchFiles(files, setFiles)}
+                disabled={isLoading || isMatching}
+                variant="light"
+                color="blue"
+              >
+                Match with TMDB
+              </Button>
+            )}
           </Group>
 
           {selectedFolder && (

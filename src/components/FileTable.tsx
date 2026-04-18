@@ -1,4 +1,5 @@
-import { Table, Badge, Text } from '@mantine/core';
+import { Table, Badge, Text, Group, Tooltip, ActionIcon, Loader, Stack } from '@mantine/core';
+import { Check, AlertCircle, Search, Info } from 'lucide-react';
 import type { ScannedFile } from '../types/media';
 
 interface FileTableProps {
@@ -27,6 +28,31 @@ function TypeBadge({ type }: { type: 'tv' | 'movie' | 'unknown' }) {
   );
 }
 
+function StatusIndicator({ status }: { status: ScannedFile['matchStatus'] }) {
+  switch (status) {
+    case 'searching':
+      return <Loader size={16} />;
+    case 'matched':
+      return (
+        <Tooltip label="Matched with TMDB">
+          <Check size={16} color="green" />
+        </Tooltip>
+      );
+    case 'error':
+      return (
+        <Tooltip label="Failed to match">
+          <AlertCircle size={16} color="red" />
+        </Tooltip>
+      );
+    default:
+      return (
+        <Tooltip label="Not matched">
+          <Search size={16} color="gray" opacity={0.5} />
+        </Tooltip>
+      );
+  }
+}
+
 export function FileTable({ files }: FileTableProps) {
   if (files.length === 0) {
     return (
@@ -37,33 +63,59 @@ export function FileTable({ files }: FileTableProps) {
   }
 
   const rows = files.map((scannedFile) => {
-    const { file, parsed } = scannedFile;
+    const { file, parsed, match, matchStatus } = scannedFile;
     const episodeInfo =
       parsed.season !== null && parsed.episode !== null
         ? `S${String(parsed.season).padStart(2, '0')}E${String(parsed.episode).padStart(2, '0')}`
         : null;
 
+    const displayTitle = match ? match.title : (parsed.title || '-');
+    const displayMeta = match 
+      ? (match.type === 'tv' ? `S${match.seasonNumber}E${match.episodeNumber}` : match.year)
+      : (episodeInfo || parsed.year || '-');
+
     return (
       <Table.Tr key={file.path}>
         <Table.Td>
-          <Text size="sm" lineClamp={1} title={file.filename}>
-            {file.filename}
-          </Text>
+          <Group gap="xs">
+            <StatusIndicator status={matchStatus} />
+            <Text size="sm" lineClamp={1} title={file.filename}>
+              {file.filename}
+            </Text>
+          </Group>
         </Table.Td>
         <Table.Td>
-          <TypeBadge type={parsed.type} />
+          <TypeBadge type={match?.type || parsed.type} />
         </Table.Td>
         <Table.Td>
-          <Text size="sm">{parsed.title || '-'}</Text>
+          <Stack gap={0}>
+            <Text size="sm" fw={match ? 500 : 400}>
+              {displayTitle}
+            </Text>
+            {match?.episodeTitle && (
+              <Text size="xs" c="dimmed" italic>
+                {match.episodeTitle}
+              </Text>
+            )}
+          </Stack>
         </Table.Td>
         <Table.Td>
-          <Text size="sm">{episodeInfo || parsed.year || '-'}</Text>
+          <Text size="sm">{displayMeta}</Text>
         </Table.Td>
         <Table.Td>
           <Text size="sm">{parsed.quality || '-'}</Text>
         </Table.Td>
         <Table.Td>
           <Text size="sm">{formatFileSize(file.size)}</Text>
+        </Table.Td>
+        <Table.Td>
+          {match && (
+            <Tooltip label={`TMDB ID: ${match.tmdbId}`}>
+              <ActionIcon variant="subtle" color="gray" size="sm">
+                <Info size={14} />
+              </ActionIcon>
+            </Tooltip>
+          )}
         </Table.Td>
       </Table.Tr>
     );
@@ -75,10 +127,11 @@ export function FileTable({ files }: FileTableProps) {
         <Table.Tr>
           <Table.Th>Filename</Table.Th>
           <Table.Th>Type</Table.Th>
-          <Table.Th>Title</Table.Th>
-          <Table.Th>Episode/Year</Table.Th>
+          <Table.Th>Match Title</Table.Th>
+          <Table.Th>Meta</Table.Th>
           <Table.Th>Quality</Table.Th>
           <Table.Th>Size</Table.Th>
+          <Table.Th style={{ width: 40 }}></Table.Th>
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>{rows}</Table.Tbody>

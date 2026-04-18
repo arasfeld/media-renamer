@@ -32,6 +32,8 @@ export interface ParsedFilename {
 export interface ScannedFile {
   file: MediaFile;
   parsed: ParsedFilename;
+  match?: MediaMatch | null;
+  matchStatus: 'none' | 'searching' | 'matched' | 'error';
 }
 
 /** For future use: matched metadata from TMDB */

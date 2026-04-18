@@ -50,6 +50,7 @@ export function useFileSystem(): UseFileSystemState & UseFileSystemActions {
       const scannedFiles: ScannedFile[] = mediaFiles.map((file) => ({
         file,
         parsed: parseFilename(file.filename),
+        matchStatus: 'none',
       }));
 
       setFiles(scannedFiles);
@@ -69,6 +70,12 @@ export function useFileSystem(): UseFileSystemState & UseFileSystemActions {
     files,
     isLoading,
     error,
+    selectFolder,
+    scanFolder,
+    setFiles,
+  };
+}
+   error,
     selectFolder,
     scanFolder,
     clearFiles,
