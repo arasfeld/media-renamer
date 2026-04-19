@@ -40,6 +40,7 @@ export function Home() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<'movie' | 'tv'>('movie');
+  const [order, setOrder] = useState<string | null>('aired');
   const [searchResults, setSearchResults] = useState<MediaMatch[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -243,6 +244,17 @@ export function Home() {
               ]}
               value={searchType}
               onChange={(value) => setSearchType(value as 'movie' | 'tv')}
+            />
+            <Select
+              label="Episode Order"
+              data={[
+                { label: 'Aired Order', value: 'aired' },
+                { label: 'DVD Order', value: 'dvd' },
+                { label: 'Absolute Order', value: 'absolute' },
+              ]}
+              value={order}
+              onChange={setOrder}
+              disabled={searchType === 'movie'}
             />
             <Button onClick={executeSearch} loading={isSearching}>
               <Search size={16} />
