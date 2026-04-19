@@ -11,9 +11,10 @@ import {
   Group
 } from '@mantine/core';
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router";
-import { LayoutGrid, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutGrid, Settings as SettingsIcon, ShieldAlert } from 'lucide-react';
 import { Home } from './pages/Home';
 import { Settings } from './pages/Settings';
+import { PlexAuditor } from './pages/PlexAuditor';
 
 const colorSchemeManager = localStorageColorSchemeManager({
   key: 'mantine-color-scheme',
@@ -57,6 +58,13 @@ function AppContent() {
             />
             <NavLink
               component={Link}
+              to="/auditor"
+              label="Plex Auditor"
+              leftSection={<ShieldAlert size={18} />}
+              active={location.pathname === '/auditor'}
+            />
+            <NavLink
+              component={Link}
               to="/settings"
               label="Settings"
               leftSection={<SettingsIcon size={18} />}
@@ -67,12 +75,8 @@ function AppContent() {
 
         <AppShell.Main>
           <Routes>
-            <Route 
-              path="/" 
-              element={
-                <Home />
-              } 
-            />
+            <Route path="/" element={<Home />} />
+            <Route path="/auditor" element={<PlexAuditor />} />
             <Route 
               path="/settings" 
               element={
