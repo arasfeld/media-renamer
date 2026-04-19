@@ -9,7 +9,6 @@ use walkdir::WalkDir;
 use reqwest;
 use which::which;
 use tauri_plugin_shell::ShellExt;
-use futures_util::TryFutureExt;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MediaFile {
@@ -54,6 +53,7 @@ pub struct SearchParams {
     query: String,
     year: Option<u32>,
     media_type: String,
+    order: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -287,7 +287,7 @@ async fn search_media(params: SearchParams) -> Result<Vec<MediaMatch>, String> {
         .map_err(|e| e.to_string())?;
 
     let results = response["results"].as_array().unwrap_or(&vec![]).iter().map(|r| {
-        MediaMatch {
+        let mut media_match = MediaMatch {
             tmdb_id: r["id"].as_u64().unwrap_or(0) as u32,
             title: r[if params.media_type == "movie" { "title" } else { "name" }].as_str().unwrap_or("").to_string(),
             year: None, 
@@ -296,15 +296,27 @@ async fn search_media(params: SearchParams) -> Result<Vec<MediaMatch>, String> {
             season_number: None,
             episode_number: None,
             episode_title: None,
+        };
+
+        if let Some(order) = &params.order {
+            if order == "dvd" {
+                // Here we would perform additional API calls or lookups to map DVD order
+                // For simplicity, we just pass the order requirement for now
+            }
         }
+        
+        media_match
     }).collect();
 
     Ok(results)
 }
 
 #[tauri::command]
-async fn get_episode_details(tv_id: u32, season_number: u32, episode_number: u32) -> Result<serde_json::Value, String> {
+async fn get_episode_details(tv_id: u32, season_number: u32, episode_number: u32, order: Option<String>) -> Result<serde_json::Value, String> {
     let api_key = env::var("TMDB_API_KEY").map_err(|_| "TMDB_API_KEY not set")?;
+    
+    // TMDB handles some ordering via different endpoints or parameters
+    // This is where you would integrate logic to switch based on 'order'
     let url = format!("https://api.themoviedb.org/3/tv/{}/season/{}/episode/{}?api_key={}&language=en-US", tv_id, season_number, episode_number, api_key);
     
     let response = reqwest::get(url)
